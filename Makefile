@@ -33,4 +33,4 @@ start-verbose:
 	docker compose -f ./docker/compose.yaml up
 
 shell:
-	@docker exec -it -w /root/unik3d unik3d /bin/bash
+	@docker exec -it -w /root/UniK3D unik3d /bin/bash
