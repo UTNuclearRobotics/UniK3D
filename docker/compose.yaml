@@ -26,7 +26,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - /dev/dri:/dev/dri
       - ${HOME}/.Xauthority:/root/.Xauthority:rw
-      - ../../unik3d:/root/unik3d
+      - ../../UniK3D:/root/UniK3D
     network_mode: host
     stdin_open: true
     tty: true
