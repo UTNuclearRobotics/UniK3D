@@ -6,8 +6,6 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.jetson-r36
-      ssh:
-        - default
     runtime: nvidia
     shm_size: ${SHM_SIZE:-200G}
     deploy:
