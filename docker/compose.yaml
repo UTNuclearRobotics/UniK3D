@@ -1,0 +1,35 @@
+services:
+  # main container
+  unik3d:
+    image: nrg/unik3d
+    container_name: unik3d
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.jetson-r36
+      ssh:
+        - default
+    runtime: nvidia
+    shm_size: ${SHM_SIZE:-200G}
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0']
+            capabilities: [gpu]
+    environment:
+      - DISPLAY=${DISPLAY}
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - NVIDIA_VISIBLE_DEVICES=all
+      - QT_X11_NO_MITSHM=1
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/dri:/dev/dri
+      - ${HOME}/.Xauthority:/root/.Xauthority:rw
+      - ../../unik3d:/root/unik3d
+    network_mode: host
+    stdin_open: true
+    tty: true
+    entrypoint: /entrypoint.sh

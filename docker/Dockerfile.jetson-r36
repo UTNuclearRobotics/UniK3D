@@ -1,0 +1,42 @@
+FROM dustynv/l4t-pytorch:r36.4.0
+# FROM dustynv/cuda-python:r36.4.0-cu128-24.04
+# Studio Labs has a Jetson Nano with L4T R36
+# To see this "cat /etc/nv_tegra_release"
+
+# #######################
+# Install Apt Packages
+# #######################
+RUN apt update && apt upgrade -y \
+    && apt install -y \
+    apt-utils \
+    curl \
+    nano \
+    vim \
+    tmux \
+    wget \
+    git \
+    jq \
+    sudo \
+    ranger \
+    mlocate \
+    x11-apps \
+    python-is-python3 \
+    gnome-terminal \
+    && rm -rf /var/lib/apt/lists/*
+
+# #######################
+# Setup .bashrc and tmux
+# #######################
+SHELL ["/bin/bash", "-l", "-c"]
+RUN echo -e "\
+    PS1='\e[1m\e[94m\u\e[97m@\e[94m\h:\e[92m\w\e[0m\e[97m#\e[0m '\n\
+    " >> ~/.bashrc
+
+RUN echo -e "set -g mouse on" >> /root/.tmux.conf
+
+# #######################
+# Setup entrypoint
+# #######################
+COPY ./docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"] 
