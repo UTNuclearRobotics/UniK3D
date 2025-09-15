@@ -25,10 +25,45 @@ RUN apt update && apt upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 # #######################
+# Install Conda and python dependencies
+# #######################
+
+ENV CONDA_PLUGINS_AUTO_ACCEPT_TOS=yes
+
+# Install Miniconda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O miniconda.sh \
+    && bash miniconda.sh -b -p /opt/conda \
+    && rm miniconda.sh
+
+# Add conda to path and initialize
+ENV PATH="/opt/conda/bin:$PATH"
+RUN conda init bash
+
+# Create conda environment with Python 3.11
+RUN conda create -n unik3d python=3.10.12 -y \
+    && /opt/conda/bin/conda run -n unik3d conda install -c conda-forge opencv ffmpeg -y
+
+# Set up conda environment
+ENV PATH="/opt/conda/envs/unik3d/bin:$PATH"
+SHELL ["conda", "run", "-n", "unik3d", "/bin/bash", "-c"]
+
+# Install python pip dependencies
+COPY ./requirements.txt ./
+
+# Use PyPI as the primary index while keeping Jetson/NGC as extra indexes for aarch64 wheels
+RUN pip install --no-cache-dir \
+    --index-url https://pypi.org/simple \
+    --extra-index-url https://pypi.ngc.nvidia.com \
+    --extra-index-url http://jetson.webredirect.org/jp6/cu126 \
+    --trusted-host jetson.webredirect.org \
+    -r requirements.txt
+
+# #######################
 # Setup .bashrc and tmux
 # #######################
 SHELL ["/bin/bash", "-l", "-c"]
 RUN echo -e "\
+    echo 'source /opt/conda/bin/activate unik3d' >> ~/.bashrc && \
     PS1='\e[1m\e[94m\u\e[97m@\e[94m\h:\e[92m\w\e[0m\e[97m#\e[0m '\n\
     " >> ~/.bashrc
 
