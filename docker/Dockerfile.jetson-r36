@@ -9,6 +9,7 @@ FROM dustynv/l4t-pytorch:r36.4.0
 RUN apt update && apt upgrade -y \
     && apt install -y \
     apt-utils \
+    python3-pip \
     curl \
     nano \
     vim \
@@ -29,6 +30,8 @@ RUN apt update && apt upgrade -y \
 # #######################
 
 ENV CONDA_PLUGINS_AUTO_ACCEPT_TOS=yes
+ENV CONDA_MAX_THREADS="2"
+ENV PIP_INDEX_URL=https://pypi.org/simple
 
 # Install Miniconda
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O miniconda.sh \
@@ -39,24 +42,16 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh 
 ENV PATH="/opt/conda/bin:$PATH"
 RUN conda init bash
 
-# Create conda environment with Python 3.11
-RUN conda create -n unik3d python=3.10.12 -y \
-    && /opt/conda/bin/conda run -n unik3d conda install -c conda-forge opencv ffmpeg -y
+# Create conda environment and install packages
+COPY ./environment.yml ./
+RUN conda env create -f environment.yml
 
-# Set up conda environment
+# Activate conda environment
 ENV PATH="/opt/conda/envs/unik3d/bin:$PATH"
 SHELL ["conda", "run", "-n", "unik3d", "/bin/bash", "-c"]
 
-# Install python pip dependencies
-COPY ./requirements.txt ./
-
-# Use PyPI as the primary index while keeping Jetson/NGC as extra indexes for aarch64 wheels
-RUN pip install --no-cache-dir \
-    --index-url https://pypi.org/simple \
-    --extra-index-url https://pypi.ngc.nvidia.com \
-    --extra-index-url http://jetson.webredirect.org/jp6/cu126 \
-    --trusted-host jetson.webredirect.org \
-    -r requirements.txt
+# RUN pip3 install --no-cache-dir \
+#     numpy>=2.0.0
 
 # #######################
 # Setup .bashrc and tmux

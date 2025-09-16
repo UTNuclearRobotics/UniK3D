@@ -1,0 +1,29 @@
+name: unik3d
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+dependencies:
+  - python=3.10.12
+  - opencv
+  - ffmpeg
+  - pip
+  # - numpy>=2.0.0 may need to be installed later
+  - scipy
+  - matplotlib
+  - pandas
+  - h5py>=3.10.0
+  - pillow>=10.2.0
+  - imageio
+  - tables
+  - tqdm
+  - trimesh
+  - protobuf>=4.25.3
+  - pip:
+    - einops>=0.7.0
+    - gradio
+    - huggingface-hub>=0.22.0
+    - tabulate
+    - termcolor
+    - timm
+    - wandb
