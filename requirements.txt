@@ -4,21 +4,23 @@ h5py>=3.10.0
 huggingface-hub>=0.22.0
 imageio
 matplotlib
-numpy>=2.0.0
-opencv-python; platform_machine != "aarch64"
+# numpy>=2.0.0
+opencv-python
 pandas
 pillow>=10.2.0
 protobuf>=4.25.3
-scipy
-tables
+# scipy
+# tables
 tabulate
 termcolor
-timm
+# timm
 tqdm
 trimesh
-triton>=2.4.0; platform_machine != "aarch64"
-torch>=2.4.0; platform_machine != "aarch64"
-torchvision>=0.19.0; platform_machine != "aarch64"
-torchaudio>=2.4.0; platform_machine != "aarch64"
+# triton>=2.4.0
 wandb
-xformers>=0.0.26; platform_machine != "aarch64"
+# xformers>=0.0.26
+
+# NOTE: Do NOT install `torch`/`torchvision`/`torchaudio` from PyPI on Jetson.
+# Use Jetson-compatible wheels (L4T R36 / CUDA 12.6) or rely on the base image's
+# PyTorch; generic PyPI CPU wheels will override the image-provided PyTorch and
+# break CUDA visibility.

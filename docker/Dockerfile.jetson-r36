@@ -27,11 +27,21 @@ RUN apt update && apt upgrade -y \
 
 # #######################
 # Install Conda and python dependencies
+# pip3 install -e .
 # #######################
 
 ENV CONDA_PLUGINS_AUTO_ACCEPT_TOS=yes
 ENV CONDA_MAX_THREADS="2"
 ENV PIP_INDEX_URL=https://pypi.org/simple
+
+# Point CUDA tooling to the Jetson CUDA installation so torch cpp extensions
+# (which check CUDA_HOME) can find headers and libraries during build.
+# On the host this is typically /usr/local/cuda (symlinked to the installed CUDA).
+ENV CUDA_HOME=/usr/local/cuda-12.6
+ENV PATH="$CUDA_HOME/bin:$PATH"
+ENV LD_LIBRARY_PATH="$CUDA_HOME/lib64:$LD_LIBRARY_PATH"
+ENV LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+ENV TORCH_CUDA_ARCH_LIST="8.7"
 
 # Install Miniconda
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O miniconda.sh \
@@ -46,6 +56,7 @@ RUN conda init bash
 COPY ./environment.yml ./
 RUN conda env create -f environment.yml
 
+
 # Activate conda environment
 ENV PATH="/opt/conda/envs/unik3d/bin:$PATH"
 SHELL ["conda", "run", "-n", "unik3d", "/bin/bash", "-c"]
@@ -59,6 +70,7 @@ SHELL ["conda", "run", "-n", "unik3d", "/bin/bash", "-c"]
 SHELL ["/bin/bash", "-l", "-c"]
 RUN echo -e "\
     echo 'source /opt/conda/bin/activate unik3d' >> ~/.bashrc && \
+    echo 'source LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"' >> ~/.bashrc && \
     PS1='\e[1m\e[94m\u\e[97m@\e[94m\h:\e[92m\w\e[0m\e[97m#\e[0m '\n\
     " >> ~/.bashrc
 

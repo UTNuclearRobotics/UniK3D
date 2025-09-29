@@ -1,0 +1,123 @@
+# Jetson r36.4.0 + PyTorch base
+FROM dustynv/l4t-pytorch:r36.4.0
+
+# --- Arguments & env
+ARG PYTHON_VERSION=3.10
+ENV DEBIAN_FRONTEND=noninteractive
+ENV CONDA_DIR=/opt/conda
+ENV CONDA_PREFIX=/opt/conda/envs/jetson
+ENV PATH=$CONDA_DIR/bin:$PATH
+
+# Use bash for RUN layers
+SHELL ["/bin/bash", "-lc"]
+
+# --- OS deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# --- Install Miniforge (conda-forge) for aarch64 and create env
+RUN curl -fsSL -o /tmp/Miniforge3.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh \
+ && bash /tmp/Miniforge3.sh -b -p $CONDA_DIR \
+ && rm /tmp/Miniforge3.sh \
+ && conda config --system --set channel_priority strict \
+ && conda config --system --add channels conda-forge \
+ && conda create -y -n jetson python=${PYTHON_VERSION} \
+ && conda clean -afy
+
+# Put the env first on PATH
+ENV PATH=$CONDA_DIR/envs/jetson/bin:$CONDA_DIR/bin:$PATH
+ENV CONDA_DEFAULT_ENV=jetson
+
+
+
+# --- Bridge system torch into the conda env via a .pth file (no torch import)
+# Tries common Jetson dist-packages locations, then falls back to a Python site scan.
+RUN set -euo pipefail; \
+    CANDIDATES="/usr/local/lib/python3.10/dist-packages /usr/lib/python3.10/dist-packages \
+                /usr/local/lib/python3/dist-packages /usr/lib/python3/dist-packages"; \
+    SYS_TORCH_SITE=""; \
+    for d in $CANDIDATES; do \
+        if [ -d "${d}/torch" ]; then SYS_TORCH_SITE="$d"; break; fi; \
+    done; \
+    if [ -z "${SYS_TORCH_SITE}" ]; then \
+        SYS_TORCH_SITE="$(/usr/bin/python3 -c "import site, os; \
+paths=set(site.getsitepackages()+[site.getusersitepackages()]); \
+print(next((p for p in paths if os.path.isdir(os.path.join(p,'torch'))), '' ))")"; \
+    fi; \
+    ENV_SITE="$($CONDA_DIR/envs/jetson/bin/python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")"; \
+    if [ -z "${SYS_TORCH_SITE}" ] || [ ! -d "${SYS_TORCH_SITE}/torch" ]; then \
+        echo 'ERROR: Could not locate system torch site-packages.' >&2; \
+        echo 'Checked:' $CANDIDATES >&2; \
+        ls -la /usr/local/lib/python*/dist-packages 2>/dev/null || true; \
+        ls -la /usr/lib/python*/dist-packages 2>/dev/null || true; \
+        exit 1; \
+    fi; \
+    if [ -z "${ENV_SITE}" ] || [ ! -d "${ENV_SITE}" ]; then \
+        echo 'ERROR: Could not locate conda env site-packages.' >&2; exit 1; \
+    fi; \
+    echo "${SYS_TORCH_SITE}" > "${ENV_SITE}/nvidia.pth"; \
+    echo "# Torch bridge: ${ENV_SITE}/nvidia.pth -> ${SYS_TORCH_SITE}"
+
+# make pip use PyPI
+ENV PIP_INDEX_URL=https://pypi.org/simple
+ENV PIP_EXTRA_INDEX_URL=https://pypi.ngc.nvidia.com
+
+ # (Optional) make solving faster/reliable
+RUN conda install -y -n base conda-libmamba-solver \
+ && conda config --system --set solver libmamba \
+ && conda clean -afy
+
+# --- Install python deps via conda and pip
+COPY ./environment.yml ./
+RUN echo "==== environment.yml ====" && cat environment.yml
+RUN conda --version \
+ && conda info \ 
+ && conda config --show | grep -E '^solver' || true
+
+ # Apply YAML to existing 'jetosn' env
+RUN conda env update -n jetson -f environment.yml \
+ && conda clean -afy 
+
+# Ensure build tooling in the env (for editable installs)
+RUN conda install -y -n jetson pip setuptools wheel \
+ && conda clean -afy
+
+# Install your package in editable mode using the env's Python/pip
+WORKDIR /root/UniK3D
+COPY . /root/UniK3D
+RUN /opt/conda/envs/jetson/bin/python -m pip install -e . --no-build-isolation
+
+# Jetson-safe: install timm & ultralytics WITHOUT deps so they don't pull CPU torch
+RUN /opt/conda/envs/jetson/bin/python -m pip install --no-deps timm ultralytics
+
+# Packages needed at runtime for safetensors checkpoints (prefer conda-forge)
+RUN conda install -y -n jetson safetensors packaging \
+ && conda clean -afy
+
+# Activate conda environment
+ENV PATH="$CONDA_PREFIX/bin:$PATH"
+SHELL ["conda", "run", "-n", "jetson", "/bin/bash", "-c"]
+
+# RUN pip3 install --no-cache-dir \
+#     numpy>=2.0.0
+
+# #######################
+# Setup .bashrc and tmux
+# #######################
+SHELL ["/bin/bash", "-l", "-c"]
+RUN echo -e "\
+    echo 'source /opt/conda/bin/activate jetson' >> ~/.bashrc && \
+    echo 'export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"' >> ~/.bashrc && \
+    PS1='\e[1m\e[94m\u\e[97m@\e[94m\h:\e[92m\w\e[0m\e[97m#\e[0m '\n\
+    " >> ~/.bashrc
+
+RUN echo -e "set -g mouse on" >> /root/.tmux.conf
+
+# #######################
+# Setup entrypoint
+# #######################
+COPY ./docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"] 

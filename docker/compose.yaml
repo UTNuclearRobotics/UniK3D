@@ -5,7 +5,7 @@ services:
     container_name: unik3d
     build:
       context: ..
-      dockerfile: docker/Dockerfile.jetson-r36
+      dockerfile: docker/Dockerfile.jetson-r36.patched
     runtime: nvidia
     shm_size: ${SHM_SIZE:-200G}
     deploy:

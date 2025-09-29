@@ -1,29 +1,33 @@
-name: unik3d
 channels:
   - conda-forge
-  - pytorch
-  - nvidia
 dependencies:
-  - python=3.10.12
+  - python=3.10
   - opencv
   - ffmpeg
   - pip
-  # - numpy>=2.0.0 may need to be installed later
+  - numpy<2 # edited from >=2.0.0
   - scipy
   - matplotlib
   - pandas
   - h5py>=3.10.0
   - pillow>=10.2.0
   - imageio
-  - tables
+  - pytables
   - tqdm
   - trimesh
   - protobuf>=4.25.3
-  - pip:
-    - einops>=0.7.0
-    - gradio
-    - huggingface-hub>=0.22.0
-    - tabulate
-    - termcolor
-    - timm
-    - wandb
+  # - triton # possible issue with pytorch
+  # following moved from pip
+  - einops>=0.7.0
+  - huggingface_hub>=0.22.0
+  - tabulate
+  - termcolor
+  - wandb
+  - gradio
+  # - timm # possible issue with pytorch
+  # - ultralytics # possible issue with pytorch
+  # - pip:
+  # NOTE: Do NOT install `torch`/`torchvision` here for Jetson/L4T images.
+  # The base L4T image or a Jetson-compatible wheel should provide CUDA-enabled
+  # PyTorch (e.g. PyTorch+CUDA 12.6). Installing generic PyPI/CPU wheels here
+  # will override the image-provided PyTorch and break CUDA visibility.

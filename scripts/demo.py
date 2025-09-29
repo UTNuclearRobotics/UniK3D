@@ -11,6 +11,8 @@ from unik3d.utils.camera import (MEI, OPENCV, BatchCamera, Fisheye624, Pinhole,
                                  Spherical)
 from unik3d.utils.visualization import colorize, save_file_ply
 
+print("Cuda available: ",torch.cuda.is_available())
+
 SAVE = False
 BASE_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "demo"
